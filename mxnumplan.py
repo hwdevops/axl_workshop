@@ -14,6 +14,7 @@ import os
 import re
 from collections import OrderedDict
 import cgi
+import urllib3
 
 logging.basicConfig(level=logging.INFO)
 
@@ -77,7 +78,6 @@ def patterns_from_web() -> Generator[OrderedDict, None, None]:
                 temp_file.write(chunk)
             for p in patterns_from_zip(temp_file):
                 yield p
-            # Also write the data to a local ZIP file
             temp_file.seek(0,0)
             with open(file_name, 'wb') as zip_file:
                 while True:
@@ -363,6 +363,7 @@ def pattern_analysis():
 
 def provision_patterns(ucm, user, password, read_only, patterns):
     # provision blocking translation patterns for optimized patterns
+
     # AXL helper object
     axl = ucmaxl.AXLHelper(ucm, auth=(user, password), version='10.0', verify=False,
                            timeout=60)
@@ -374,7 +375,7 @@ def provision_patterns(ucm, user, password, read_only, patterns):
     if local_partition is None:
         ucm_objects = []
     else:
-        ucm_objects = axl.list_translation(routePartitionName=PARTITION_NAME, returnedTags={'pattern':''})
+        ucm_objects = axl.list_translation(routePartitionName=PARTITION_NAME)
 
     print(f'{len(ucm_objects)} patterns exist in UCM')
 
@@ -414,6 +415,8 @@ def main():
     """
     :return:
     """
+    # disable warnings for HTTPS sessions w/ diabled cert validation
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     args = argparse.ArgumentParser(
         description=f"""Provision blocking translation patterns to cover all mobile phone number in Mexico.
@@ -432,10 +435,7 @@ def main():
                       help='Don\'t write to UCM. Existing patterns are read if possible.')
     args.add_argument('--analysis', required=False, action='store_true',
                       help='If present, then compare patterns of exixsting data sets')
-    if False:
-        parsed_args = args.parse_args('--analysis'.split())
-    else:
-        parsed_args = args.parse_args()
+    parsed_args = args.parse_args()
 
     if parsed_args.analysis:
         pattern_analysis()
