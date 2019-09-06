@@ -8,6 +8,8 @@ UCM_PUBLISHER = '198.18.133.3'
 AXL_USER = 'administrator'
 AXL_PASSWORD = 'dCloud123!'
 
+# from connection_parameters import *
+
 def axl_test():
     # disable warnings for HTTPS sessions w/ diabled cert validation
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -23,7 +25,7 @@ def get_version():
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     axl_endpoint = f'https://{UCM_PUBLISHER}:8443/axl/'
     body = """
-        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.cisco.com/AXL/API/12.0">
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.cisco.com/AXL/API/11.0">
             <soapenv:Header/>
             <soapenv:Body>
                 <ns:getCCMVersion>
@@ -31,7 +33,7 @@ def get_version():
             </soapenv:Body>
         </soapenv:Envelope>"""
     headers = {
-        'SOAPAction': 'CUCM:DB ver=12.0 getCCMVersion',
+        'SOAPAction': 'CUCM:DB ver=11.0 getCCMVersion',
         'Content-Type': 'text/xml;charset=UTF-8'
     }
     r = requests.post(axl_endpoint, auth=(AXL_USER, AXL_PASSWORD), verify=False, data=body, headers=headers)
@@ -51,7 +53,7 @@ def list_css():
     axl_endpoint = f'https://{UCM_PUBLISHER}:8443/axl/'
 
     body = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
-    xmlns:ns="http://www.cisco.com/AXL/API/12.0">
+    xmlns:ns="http://www.cisco.com/AXL/API/11.0">
        <soapenv:Header/>
        <soapenv:Body>
           <ns:listCss >
@@ -59,25 +61,19 @@ def list_css():
                 <name>%</name>
              </searchCriteria>
              <returnedTags uuid="?">
-                <!--Optional:-->
                 <description>?</description>
-                <!--Optional:-->
                 <clause>?</clause>
-                <!--Optional:-->
                 <dialPlanWizardGenId>?</dialPlanWizardGenId>
-                <!--Optional:-->
                 <partitionUsage>?</partitionUsage>
-                <!--Optional:-->
                 <name>?</name>
              </returnedTags>
-             <!--Optional:-->
              <first>10</first>
           </ns:listCss>
        </soapenv:Body>
     </soapenv:Envelope>"""
 
     headers = {
-        'SOAPAction': 'CUCM:DB ver=12.0 listCss',
+        'SOAPAction': 'CUCM:DB ver=11.0 listCss',
         'Content-Type': 'text/xml;charset=UTF-8'
     }
     r = requests.post(axl_endpoint, auth=(AXL_USER, AXL_PASSWORD), verify=False, data=body, headers=headers)

@@ -13,6 +13,7 @@ UCM_PUBLISHER = '198.18.133.3'
 AXL_USER = 'administrator'
 AXL_PASSWORD = 'dCloud123!'
 
+# from connection_parameters import *
 
 # a simple zeep plugin to log all SOAP request and responses to stdin
 class LoggingPlugin(zeep.plugins.Plugin):
@@ -29,6 +30,7 @@ class LoggingPlugin(zeep.plugins.Plugin):
         LoggingPlugin.print_envelope('out', envelope)
         return envelope, http_headers
 
+
 def print_history():
     print('SOAP Request sent to UCM:')
     print(etree.tostring(history.last_sent['envelope'], pretty_print=True).decode())
@@ -44,6 +46,7 @@ def list_phones():
     dps = service.listPhone(searchCriteria={'name': '%'}, returnedTags=rt, first=5)
     print(dps)
 
+
 def list_css():
     tags = ['description', 'clause', 'dialPlanWizardGenId', 'partitionUsage', 'name']
     search_criteria = {'name': '%'}
@@ -52,9 +55,12 @@ def list_css():
     css_list = r['return'].css
     print(css_list)
 
+    # All CSS names
     print('\n\n'.join(f'{css.name}({css.uuid}): {css.clause}' for css in css_list))
 
+    # Let's see what the last sent envelope looked like
     print(etree.tostring(history.last_sent['envelope'], pretty_print=True).decode())
+
 
 def list_process_node():
     r_tags = 'name description mac nodeUsage processNodeRole'
@@ -62,22 +68,35 @@ def list_process_node():
                                                                                              r_tags.split()})
     r = r['return'].processNode
     print(r)
-    print('\n'.join(' '.join(f'{k}={v:<22}' for k, v in p.items() if v is not None) for p in r))
+    print('\n'.join(' '.join(f'{k}={v:<22}' for k, v in p.__values__.items() if v is not None) for p in r))
+
 
 def user_str(user):
-    return ', '.join(f'{k}={v}' for k,v in user.__values__.items() if v is not None)
+    """
+    create string representation for LUser object
+    :param user: LUser
+    :return: string representation
+    """
+    return ', '.join(f'{k}={v}' for k, v in user.__values__.items() if v is not None)
+
 
 def add_user():
+    """
+    Try to create a user
+    """
     global history
+
+    # list the 1st 10 users
     r = service.listUser(searchCriteria={'lastName': '%'}, returnedTags={'userid': ''}, first=10)
     user_list = r['return'].user
     print(user_list)
     print('\n'.join(user_str(u) for u in user_list))
-    user = user_list[0]
 
+    # get details of 1st user
+    user = user_list[0]
     rt = 'firstName lastName userid presenceGroupName'
     returned_tags = {t: '' for t in rt.split()}
-    returned_tags['associatedGroups'] = {'userGroup':{'name':'', 'userRoles':''}}
+    returned_tags['associatedGroups'] = {'userGroup': {'name': '', 'userRoles': ''}}
     r = service.getUser(uuid=user.uuid, returnedTags=returned_tags)
     user_details = r['return'].user
     print(user_str(user_details))
@@ -113,18 +132,19 @@ def add_user():
     else:
         print(r)
 
+
 class Row:
     # Helper class to create an object based on a row returned from an AXL executeSqlQuery
     def __init__(self, row):
         # save a dictionary of key/value pairs
-        self._obj =  {e.tag:e.text for e in row}
+        self._obj = {e.tag: e.text for e in row}
 
     def __repr__(self):
         """
         String representation for row object
         :return:
         """
-        return f'Row({", ".join(f"{k}={v}" for k,v in self._obj.items())})'
+        return f'Row({", ".join(f"{k}={v}" for k, v in self._obj.items())})'
 
     def __getattr__(self, item):
         """
@@ -133,6 +153,7 @@ class Row:
         :return:
         """
         return self._obj[item]
+
 
 def sql_test():
     r = service.executeSQLQuery(sql='select * from processnode')
@@ -156,17 +177,17 @@ def sql_test():
     print(f'CSSes w/o partitions: {", ".join(csses_wo_partitions)}')
 
     # let's try to determine the set of partitions used in CSSes
-    clauses = (r.clause for r in rows)
+    clauses = [r.clause for r in rows]
 
     # only not empty clauses
-    clauses = (c for c in clauses if c is not None)
+    clauses = [c for c in clauses if c is not None]
 
     # get partition names by splitting at ':'
-    clauses = (c.split(':') for c in clauses)
+    clauses = [c.split(':') for c in clauses]
 
     # now chain all partition names, put them in a set to make them unique, and put them into a dictionary
     # so that it's fast to check for existence of a partition
-    used_partitions = {p: '' for p in set(itertools.chain.from_iterable(clauses))}
+    used_partitions = set(itertools.chain.from_iterable(clauses))
 
     # Get all partition names
     r = service.executeSQLQuery(sql='select name from routepartition')
@@ -190,7 +211,7 @@ def try_zeep():
     logging.basicConfig(level=logging.DEBUG)
     axl_url = f'https://{UCM_PUBLISHER}:8443/axl/'
 
-    wsdl_version = '10.0'
+    wsdl_version = '11.0'
     wsdl = os.path.join(os.path.dirname(__file__), 'WSDL', wsdl_version, 'AXLAPI.wsdl')
     print(f'Using WSDL: {wsdl}')
 
@@ -207,16 +228,13 @@ def try_zeep():
                          plugins=[history, LoggingPlugin()])
     service = client.create_service('{http://www.cisco.com/AXLAPIService/}AXLAPIBinding', axl_url)
 
-    factory = client.type_factory('ns0')
+    list_phones()
 
+    list_css()
 
-    # list_phones()
+    list_process_node()
 
-    # list_css()
-    
-    # list_process_node()
-
-    # add_user()
+    add_user()
 
     sql_test()
 

@@ -6,6 +6,8 @@ UCM_PUBLISHER = '198.18.133.3'
 AXL_USER = 'administrator'
 AXL_PASSWORD = 'dCloud123!'
 
+# from connection_parameters import *
+
 def main():
     """
     Mexico in August 2019 will change their national numbering plan to a closed fixed length (10 digit) numbering
@@ -50,29 +52,14 @@ def main():
     patterns = patterns[:100]
 
     mxnumplan.provision_patterns(ucm=UCM_PUBLISHER, user=AXL_USER, password=AXL_PASSWORD,
-                       read_only=False, patterns=patterns)
+                       read_only=False, route_list_name=None, patterns=patterns)
 
     return
 
 def delete_patterns():
-    # we need an AXL helper
-    axl = ucmaxl.AXLHelper(UCM_PUBLISHER, auth=(AXL_USER, AXL_PASSWORD), version='10.0', verify=False,
-                           timeout=60)
+    mxnumplan.provision_patterns(ucm=UCM_PUBLISHER, user=AXL_USER, password=AXL_PASSWORD,
+                                 read_only=False, route_list_name=None, patterns=[])
 
-    # thin AXL to get the pkid of the partition the patterns are in
-    r = axl.sql_query('select pkid from routepartition where name="blockmobile"')
-    if not r:
-        print('partition not found')
-    else:
-        # build an SQL statement to delete from numplan
-        pkid = r[0]['pkid']
-        sql = f'delete numplan where fkroutepartition="{pkid}"'
-        print(f'SQL statements to delete all entries from numplan table in given partition: {sql}')
-
-        # Execute!
-        r = axl.sql_update(sql)
-        print(f'{r} patterns deleted')
-    return
 
 if __name__ == '__main__':
 

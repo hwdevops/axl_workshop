@@ -187,14 +187,13 @@ class AXLHelper:
         return r
 
     ############### user
-    def list_user(self, **search_criteria):
-        returned_tags = search_criteria.pop('returnedTags', None)
+    def list_user(self, returnedTags = None, **search_criteria):
         search_criteria = self.filter_search_criteria(search_criteria,
                                                       ['firstName', 'lastName', 'userid', 'department'],
                                                       'userid')
-        if returned_tags is None:
-            returned_tags = {'uuid': '', 'userid': '', 'firstName': '', 'lastName': ''}
-        r = self.service.listUser(searchCriteria=search_criteria, returnedTags=returned_tags)
+
+        returnedTags = returnedTags or {'uuid': '', 'userid': '', 'firstName': '', 'lastName': ''}
+        r = self.service.listUser(searchCriteria=search_criteria, returnedTags=returnedTags)
         return self.handle_list_response(r)
 
     ############### CSS
@@ -230,7 +229,7 @@ class AXLHelper:
         return self.handle_list_response(r)
 
     def get_route_partition(self, **search_criteria):
-        search_criteria = self.filter_search_criteria(search_criteria, ['name', 'uuid'])
+        search_criteria = self.filter_search_criteria(search_criteria, ['name', 'uuid'], 'name')
         assert search_criteria is not None, 'Search criteria mantatory'
         assert len(search_criteria) == 1, 'Only name or uuid can be used'
 
@@ -263,6 +262,22 @@ class AXLHelper:
             p = self.update_route_partition(name=name, description=description)
         return p
 
+    ################ route list
+    def get_route_list(self, **search_criteria):
+        search_criteria = self.filter_search_criteria(search_criteria, ['name', 'uuid'], 'name')
+        assert search_criteria is not None, 'Search criteria mantatory'
+        assert len(search_criteria) == 1, 'Only name or uuid can be used'
+
+        tags = ['name', 'description', 'callManagerGroupName', 'routeListEnabled']
+        try:
+            r = self.service.getRouteList(returnedTags={t: '' for t in tags}, **search_criteria)
+        except zeep.exceptions.Fault as e:
+            if e.message.startswith('Item not valid'):
+                return None
+            raise
+        r = zeep.helpers.serialize_object(r['return']['routeList'])
+        return r
+
     ################ route pattern
     ROUTE_PATTERN_TAGS = ['pattern', 'description', 'usage', 'routePartitionName', 'blockEnable',
                           'calledPartyTransformationMask',
@@ -274,22 +289,25 @@ class AXLHelper:
                           'provideOutsideDialtone', 'callingPartyNumberingPlan', 'callingPartyNumberType',
                           'calledPartyNumberingPlan', 'calledPartyNumberType', 'authorizationCodeRequired',
                           'authorizationLevelRequired', 'clientCodeRequired', 'withTag', 'withValueClause',
-                          'resourcePriorityNamespaceName', 'routeClass', 'externalCallControl',
-                          'isEmergencyServiceNumber']
+                          'resourcePriorityNamespaceName', 'routeClass', 'externalCallControl']
 
-    def list_route_pattern(self, **search_criteria):
+    def list_route_pattern(self, returned_tags = None, **search_criteria):
         search_criteria = self.filter_search_criteria(search_criteria, ['pattern', 'description', 'routePartitionName'],
                                                       'pattern')
+        returned_tags = returned_tags or self.ROUTE_PATTERN_TAGS
+
         r = self.service.listRoutePattern(searchCriteria=search_criteria,
-                                          returnedTags={t: '' for t in self.ROUTE_PATTERN_TAGS})
+                                          returnedTags={t:'' for t in returned_tags})
         return self.handle_list_response(r)
 
-    def get_route_pattern(self, **search_criteria):
+    def get_route_pattern(self, returned_tags = None, **search_criteria):
         search_criteria = self.filter_search_criteria(search_criteria, ['uuid', 'pattern', 'routePartitionName'])
         assert search_criteria is not None, 'Search criteria mantatory'
 
+        returned_tags = returned_tags or self.ROUTE_PATTERN_TAGS
+
         try:
-            r = self.service.getRoutePattern(returnedTags={t: '' for t in self.ROUTE_PATTERN_TAGS}, **search_criteria)
+            r = self.service.getRoutePattern(returnedTags={t:'' for t in returned_tags}, **search_criteria)
         except zeep.exceptions.Fault as e:
             if e.message.startswith('Item not valid'):
                 return None
@@ -338,6 +356,30 @@ class AXLHelper:
 
     def remove_route_pattern(self, uuid):
         r = self.service.removeRoutePattern(uuid=uuid)
+        return r
+
+
+    ######### called party transforms
+    CDPTX_TAGS = ['pattern', 'description', 'usage', 'routePartitionName', 'calledPartyTransformationMask',
+                  'dialPlanName', 'digitDiscardInstructionName', 'patternUrgency', 'routeFilterName',
+                  'calledPartyPrefixDigits', 'calledPartyNumberingPlan', 'calledPartyNumberType',
+                  'mlppPreemptionDisabled']
+
+    def list_called_party_transformation_pattern(self, **search_criteria):
+        search_criteria = self.filter_search_criteria(search_criteria,
+                                                      ['pattern', 'description', 'routePartitionName', 'dialPlanName',
+                                                       'routeFilterName'],
+                                                      'pattern')
+        r = self.service.listCalledPartyTransformationPattern(searchCriteria=search_criteria,
+                                                              returnedTags={t: '' for t in self.CDPTX_TAGS})
+        return self.handle_list_response(r)
+
+    def add_called_party_transformation_pattern(self, **values):
+        r = self.service.addCalledPartyTransformationPattern(calledPartyTransformationPattern=values)
+        return r['return']
+
+    def remove_called_party_transformation_pattern(self, uuid):
+        r = self.service.removeCalledPartyTransformationPattern(uuid=uuid)
         return r
 
     ######### SIP profile
@@ -468,15 +510,40 @@ class AXLHelper:
         return p
 
     ################ translation pattern
-    TRANS_PATTERN_TAGS = ['pattern', 'routePartitionName']
+    TRANS_PATTERN_TAGS = ['pattern', 'description', 'routePartitionName']
 
-    def list_translation(self, **search_criteria):
-        returned_tags = search_criteria.pop('returnedTags', None) or {t:'' for t in self.TRANS_PATTERN_TAGS}
+    def list_translation(self, returned_tags=None, **search_criteria):
+
+        returned_tags = returned_tags or self.TRANS_PATTERN_TAGS
+
         search_criteria = self.filter_search_criteria(search_criteria, ['pattern', 'description', 'routePartitionName'],
                                                       'pattern')
         r = self.service.listTransPattern(searchCriteria=search_criteria,
-                                          returnedTags=returned_tags)
+                                          returnedTags={t: '' for t in returned_tags})
         return self.handle_list_response(r)
+
+    def add_translation(self, pattern, partition, description,
+                        digit_discard='', prefix_digits='',
+                        called_party_transformation_mask='',
+                        block_enable=False, urgency=True,
+                        outside_dial_tone=False, css_inheritance=True,
+                        dont_wait_for_idt=True):
+        translation = {
+            'pattern': pattern,
+            'routePartitionName': partition,
+            'description': description,
+            'usage': 'Translation',
+            'blockEnable': block_enable,
+            'patternUrgency': urgency,
+            'provideOutsideDialtone': outside_dial_tone,
+            'digitDiscardInstructionName': digit_discard,
+            'prefixDigitsOut': prefix_digits,
+            'useOriginatorCss': css_inheritance,
+            'dontWaitForIDTOnSubsequentHops': dont_wait_for_idt,
+            'calledPartyTransformationMask': called_party_transformation_mask
+        }
+        r = self.service.addTransPattern(transPattern=translation)
+        return r
 
     def add_update_translation(self, pattern, partition, description,
                                digit_discard='', prefix_digits='',
