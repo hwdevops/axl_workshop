@@ -6,6 +6,8 @@ To run a Docker container with the prepared demos execute:
 
 `docker run -it --rm --name axl -p 8888:8888 jeokrohn/axl_workshop` 
 
+.. and then point your browser to http://localhost:8888
+
 `01 AXL Introduction.py`\
 simple examples how to access AXL directly using SOAP envelopes generated for example using [SoapUI](https://www.soapui.org/downloads/soapui.html).
 

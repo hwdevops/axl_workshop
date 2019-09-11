@@ -13,9 +13,12 @@ UCM_PUBLISHER = '198.18.133.3'
 AXL_USER = 'administrator'
 AXL_PASSWORD = 'dCloud123!'
 
+
 # from connection_parameters import *
 
 # a simple zeep plugin to log all SOAP request and responses to stdin
+# a zeep plugin basically has two methods ingress and egress which get called just before sending (egress)
+# and just after receiving (ingress) a SOAP request/response
 class LoggingPlugin(zeep.plugins.Plugin):
     @staticmethod
     def print_envelope(header, envelope):
@@ -48,18 +51,27 @@ def list_phones():
 
 
 def list_css():
+    # Both the searchCriteria and the returnedTags parameter can simply be passed as Python directories with the
+    # corresponding key/value mappings.
     tags = ['description', 'clause', 'dialPlanWizardGenId', 'partitionUsage', 'name']
     search_criteria = {'name': '%'}
     r = service.listCss(searchCriteria=search_criteria, returnedTags={t: '' for t in tags}, first=5)
 
     css_list = r['return'].css
     print(css_list)
+    print(type(css_list[0]))
 
     # All CSS names
+    # Attributes of the returned objects can be accessed as attributes because zeep creates class instances based on
+    # the class definitions in the WSDL file (see <class 'zeep.objects.LCss'> output before)
     print('\n\n'.join(f'{css.name}({css.uuid}): {css.clause}' for css in css_list))
 
-    # Let's see what the last sent envelope looked like
+    # thanks to the history plugin we still have access to the actual request/reponse sent/received
+    print('SOAP Request sent to UCM:')
     print(etree.tostring(history.last_sent['envelope'], pretty_print=True).decode())
+
+    print('\nSOAP Response received from UCM:')
+    print(etree.tostring(history.last_received['envelope'], pretty_print=True).decode())
 
 
 def list_process_node():
@@ -211,14 +223,24 @@ def try_zeep():
     logging.basicConfig(level=logging.DEBUG)
     axl_url = f'https://{UCM_PUBLISHER}:8443/axl/'
 
+    # we have WSDL files for a number of releases in the WSDL directory
     wsdl_version = '11.0'
     wsdl = os.path.join(os.path.dirname(__file__), 'WSDL', wsdl_version, 'AXLAPI.wsdl')
     print(f'Using WSDL: {wsdl}')
 
+    # we want to use the same requests session for all requests
+    # among other things this makes sure that cookies are handled
+    # properly: a sessoon cookies set by UCM in the 1st reaponse
+    # will automatically be sent with each following request
+    # see:
+    # https://developer.cisco.com/docs/axl/#!axl-developer-guide/using-jsessionidsso-to-improve-performance
     session = requests.Session()
     session.auth = (AXL_USER, AXL_PASSWORD)
     session.verify = False
 
+    # setting up the zeep client
+    # - we enable the history plugin so that after calling an endpoint we have access to the latest request & response
+    # - also we enable our logging plugin above which logs requests and responses in real-time
     transport = zeep.Transport(session=session, cache=zeep.cache.SqliteCache())
     history = zeep.plugins.HistoryPlugin()
     client = zeep.Client(wsdl=wsdl,
@@ -226,6 +248,7 @@ def try_zeep():
                          # create a chain of plugins to keep the history of request/response
                          # and log everything to stdout
                          plugins=[history, LoggingPlugin()])
+    # the 1st parameter here is the binding defined in the WSDL
     service = client.create_service('{http://www.cisco.com/AXLAPIService/}AXLAPIBinding', axl_url)
 
     list_phones()
