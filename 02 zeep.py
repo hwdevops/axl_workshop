@@ -9,9 +9,11 @@ from lxml import etree
 import urllib3
 import itertools
 
-UCM_PUBLISHER = '198.18.133.3'
-AXL_USER = 'administrator'
-AXL_PASSWORD = 'dCloud123!'
+import env.user_env
+
+UCM_PUBLISHER = env.user_env.CUCM_IP
+AXL_USER = env.user_env.CUCM_ADMIN_USER
+AXL_PASSWORD = env.user_env.CUCM_ADMIN_PASSWORD
 
 
 # from connection_parameters import *
@@ -224,7 +226,7 @@ def try_zeep():
     axl_url = f'https://{UCM_PUBLISHER}:8443/axl/'
 
     # we have WSDL files for a number of releases in the WSDL directory
-    wsdl_version = '11.0'
+    wsdl_version = '12.5'
     wsdl = os.path.join(os.path.dirname(__file__), 'WSDL', wsdl_version, 'AXLAPI.wsdl')
     print(f'Using WSDL: {wsdl}')
 
@@ -257,7 +259,7 @@ def try_zeep():
 
     list_process_node()
 
-    add_user()
+    #add_user()
 
     sql_test()
 
