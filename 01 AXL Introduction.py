@@ -4,7 +4,9 @@ import json
 import urllib3
 from lxml import etree, objectify
 
-UCM_PUBLISHER = '198.18.133.3'
+import env.user_env
+
+UCM_PUBLISHER = ''
 AXL_USER = 'administrator'
 AXL_PASSWORD = 'dCloud123!'
 
