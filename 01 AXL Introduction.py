@@ -6,9 +6,9 @@ from lxml import etree, objectify
 
 import env.user_env
 
-UCM_PUBLISHER = ''
-AXL_USER = 'administrator'
-AXL_PASSWORD = 'dCloud123!'
+UCM_PUBLISHER = env.user_env.CUCM_IP
+AXL_USER = env.user_env.CUCM_ADMIN_USER
+AXL_PASSWORD = env.user_env.CUCM_ADMIN_PASSWORD
 
 # from connection_parameters import *
 
