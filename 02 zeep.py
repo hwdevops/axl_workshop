@@ -46,8 +46,31 @@ def print_history():
 def list_phones():
     rt = 'name description product model class protocol'
     rt = {k: '' for k in rt.split()}
+    # rt = {dict}{
+    # 'name': '',
+    # 'description': '',
+    # 'product': '',
+    # 'model': '',
+    # 'class': '',
+    # 'protocol': ''}
     cc = 'userHoldMohAudioSourceId phoneTemplateName mlppDomainId mlppIndicationStatus softkeyTemplateName deviceName'
     rt['currentConfig'] = {k: '' for k in cc.split()}
+    #rt = {dict}{
+    # 'name': '',
+    # 'description': '',
+    # 'product': '',
+    # 'model': '',
+    # 'class': '',
+    # 'protocol': '',
+    # 'currentConfig': {
+    #       'userHoldMohAudioSourceId': '',
+    #       'phoneTemplateName': '',
+    #       'mlppDomainId': '',
+    #       'mlppIndicationStatus': '',
+    #       'softkeyTemplateName': '',
+    #       'deviceName': ''
+    #       }
+    #  }
     dps = service.listPhone(searchCriteria={'name': '%'}, returnedTags=rt, first=5)
     print(dps)
 
@@ -232,7 +255,7 @@ def try_zeep():
 
     # we want to use the same requests session for all requests
     # among other things this makes sure that cookies are handled
-    # properly: a sessoon cookies set by UCM in the 1st reaponse
+    # properly: a session cookies set by UCM in the 1st reaponse
     # will automatically be sent with each following request
     # see:
     # https://developer.cisco.com/docs/axl/#!axl-developer-guide/using-jsessionidsso-to-improve-performance
